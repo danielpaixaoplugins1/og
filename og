@@ -1,0 +1,81 @@
+<?php
+/**
+ * Plugin Name:       Miniaturas em Redes
+ * Plugin URI:        https://seu-site-aqui.com/miniaturas-em-redes
+ * Description:       Este plugin aprimora a compartilhação de links de postagens do WordPress nas redes sociais, exibindo miniaturas.
+ * Version:           1.0.1
+ * Requires at least: 5.0
+ * Requires PHP:      7.3
+ * Author:            Daniel Oliveira da Paixao
+ * Author URI:        https://seu-site-aqui.com/
+ * License:           GPL v2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       miniaturas-em-redes
+ * Domain Path:       /languages
+ */
+
+// Evita acesso direto ao arquivo do plugin
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Saída se o arquivo for acessado diretamente
+}
+
+/**
+ * Adiciona as tags Open Graph no cabeçalho.
+ */
+function mer_add_open_graph_tags() {
+    if (is_singular()) {
+        global $post;
+
+        // Utiliza a imagem destacada se disponível
+        $image_url = mer_get_featured_image($post);
+
+        // Se não houver imagem destacada, procura pela primeira imagem no conteúdo da postagem
+        if (!$image_url) {
+            $image_url = mer_get_first_image_from_content($post->post_content);
+        }
+
+        // Adiciona a tag Open Graph para a imagem, se disponível
+        if ($image_url) {
+            echo '<meta property="og:image" content="' . esc_url($image_url) . '" />';
+        }
+
+        // Adiciona outras tags Open Graph (título, descrição, URL)
+        mer_add_other_og_tags($post);
+    }
+}
+
+/**
+ * Busca pela imagem destacada da postagem.
+ */
+function mer_get_featured_image($post) {
+    if (has_post_thumbnail($post->ID)) {
+        $thumbnail_id = get_post_thumbnail_id($post->ID);
+        $thumbnail = wp_get_attachment_image_src($thumbnail_id, 'full');
+        return $thumbnail ? $thumbnail[0] : false;
+    }
+    return false;
+}
+
+/**
+ * Extrai a primeira imagem do conteúdo da postagem.
+ */
+function mer_get_first_image_from_content($content) {
+    preg_match('/<img.+src=[\'"](?P<src>.+?)[\'"].*>/i', $content, $image);
+    return $image['src'] ?? false;
+}
+
+/**
+ * Adiciona tags Open Graph para título, descrição e URL.
+ */
+function mer_add_other_og_tags($post) {
+    $title = get_the_title();
+    $excerpt = has_excerpt($post->ID) ? get_the_excerpt() : wp_trim_words($post->post_content, 55);
+    $permalink = get_permalink();
+
+    echo '<meta property="og:title" content="' . esc_attr($title) . '" />';
+    echo '<meta property="og:description" content="' . esc_attr($excerpt) . '" />';
+    echo '<meta property="og:url" content="' . esc_url($permalink) . '" />';
+}
+
+// Gancho no wp_head para adicionar as tags Open Graph
+add_action('wp_head', 'mer_add_open_graph_tags');
